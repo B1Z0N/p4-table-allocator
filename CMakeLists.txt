@@ -14,7 +14,7 @@ add_library(project_options INTERFACE)
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(project_options INTERFACE -Wall -Wextra -Werror -Wpedantic)
 endif()
-add_library(p4alloc src/input.cpp)
+add_library(p4alloc src/input.cpp src/graph.cpp)
 target_include_directories(p4alloc PUBLIC include)
 target_link_libraries(p4alloc PUBLIC nlohmann_json::nlohmann_json project_options)
 
