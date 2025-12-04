@@ -107,3 +107,85 @@ TEST_CASE("allocation validates programmatic inputs too") {
     SECTION("bad dependency") { p.tables[0].match_deps = {"missing"}; }
     CHECK(std::holds_alternative<Error>(allocate(p, GreedyAllocator{})));
 }
+
+TEST_CASE("oversized SRAM and TCAM tables split across consecutive stages") {
+    const Program p{{4, 10, 5}, {
+        {"sram", MemoryType::sram, 25, {}, {}},
+        {"tcam", MemoryType::tcam, 11, {}, {}}}};
+    const auto a = greedy(p);
+    REQUIRE(a.fits);
+    CHECK(a.first_stage[0] == 0);
+    CHECK(a.last_stage[0] == 2);
+    CHECK(a.stages_used() == 3);
+    CHECK(a.stages[0].sram_used == 10);
+    CHECK(a.stages[1].sram_used == 10);
+    CHECK(a.stages[2].sram_used == 5);
+    CHECK(a.stages[2].tcam_used == 1);
+}
+
+TEST_CASE("dependents wait for the final fragment") {
+    const Program p{{4, 10, 10}, {
+        {"big", MemoryType::sram, 25, {}, {}},
+        {"match", MemoryType::tcam, 2, {"big"}, {}},
+        {"action", MemoryType::tcam, 3, {}, {"big"}}}};
+    const auto a = greedy(p);
+    REQUIRE(a.fits);
+    CHECK(a.first_stage[1] == 3);
+    CHECK(a.first_stage[2] == 2);
+}
+
+TEST_CASE("failed splitting leaves no fragments or memory reservations") {
+    const Program p{{2, 10, 0}, {
+        {"small", MemoryType::sram, 4, {}, {}},
+        {"big", MemoryType::sram, 17, {}, {}}}};
+    const auto a = greedy(p);
+    CHECK_FALSE(a.fits);
+    CHECK(a.stages[0].sram_used == 4);
+    CHECK(a.stages[1].sram_used == 0);
+    CHECK(a.stages[0].tables.size() == 1);
+    CHECK(a.stages[1].tables.empty());
+    CHECK_FALSE(a.first_stage[1]);
+}
+
+TEST_CASE("split fragments cannot skip a full intervening stage") {
+    const Program p{{3, 10, 0}, {
+        {"anchor", MemoryType::sram, 0, {}, {}},
+        {"middle", MemoryType::sram, 10, {"anchor"}, {}},
+        {"big", MemoryType::sram, 15, {}, {}}}};
+    const auto a = greedy(p);
+    CHECK_FALSE(a.fits);
+    CHECK(a.stages[0].sram_used == 0);
+    CHECK(a.stages[1].sram_used == 10);
+    CHECK(a.stages[2].sram_used == 0);
+}
+
+TEST_CASE("split search can restart after a blocked stage") {
+    const Program p{{4, 10, 0}, {
+        {"anchor", MemoryType::sram, 0, {}, {}},
+        {"middle", MemoryType::sram, 10, {"anchor"}, {}},
+        {"big", MemoryType::sram, 15, {}, {}}}};
+    const auto a = greedy(p);
+    REQUIRE(a.fits);
+    CHECK(a.first_stage[2] == 2);
+    CHECK(a.last_stage[2] == 3);
+}
+
+TEST_CASE("single stage sized tables are not split to fill fragmented holes") {
+    const Program p{{2, 10, 0}, {
+        {"a", MemoryType::sram, 6, {}, {}},
+        {"b", MemoryType::sram, 6, {}, {}},
+        {"c", MemoryType::sram, 8, {}, {}}}};
+    CHECK_FALSE(greedy(p).fits);
+}
+
+TEST_CASE("split uses partial available memory and conserves table size") {
+    const Program p{{3, 10, 0}, {
+        {"small", MemoryType::sram, 4, {}, {}},
+        {"big", MemoryType::sram, 16, {}, {}}}};
+    const auto a = greedy(p);
+    REQUIRE(a.fits);
+    CHECK(a.first_stage[1] == 0);
+    CHECK(a.last_stage[1] == 1);
+    CHECK(a.stages[0].tables[1].size == 6);
+    CHECK(a.stages[1].tables[0].size == 10);
+}

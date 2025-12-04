@@ -22,9 +22,31 @@ struct Chunk {
 std::optional<std::vector<Chunk>> find_placement(const Table& table, const Pipeline& pipeline,
                                                 std::span<const Stage> stages, std::size_t earliest) {
     const auto budget = capacity(pipeline, table.type);
-    for (std::size_t start = earliest; start < stages.size(); ++start) {
-        if (table.size <= budget - used(stages[start], table.type)) {
-            return std::vector<Chunk>{{start, table.size}};
+    if (table.size <= budget) {
+        for (std::size_t start = earliest; start < stages.size(); ++start) {
+            if (table.size <= budget - used(stages[start], table.type)) {
+                return std::vector<Chunk>{{start, table.size}};
+            }
+        }
+        return std::nullopt;
+    }
+    if (budget == 0) {
+        return std::nullopt;
+    }
+    std::vector<Chunk> chunks;
+    auto remaining = table.size;
+    for (std::size_t stage = earliest; stage < stages.size(); ++stage) {
+        const auto free = budget - used(stages[stage], table.type);
+        if (free == 0) {
+            chunks.clear();
+            remaining = table.size;
+            continue;
+        }
+        const auto amount = std::min(free, remaining);
+        chunks.push_back({stage, amount});
+        remaining -= amount;
+        if (remaining == 0) {
+            return chunks;
         }
     }
     return std::nullopt;
