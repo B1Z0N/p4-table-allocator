@@ -32,6 +32,10 @@ struct GreedyAllocator {
     Result<Allocation> operator()(const Program& program) const;
 };
 
+struct ConstrainedAllocator {
+    Result<Allocation> operator()(const Program& program) const;
+};
+
 template <typename T>
 concept Allocator = requires(const T allocator, const Program& program) {
     { allocator(program) } -> std::same_as<Result<Allocation>>;
@@ -43,5 +47,6 @@ Result<Allocation> allocate(const Program& program, const T& allocator) {
 }
 
 static_assert(Allocator<GreedyAllocator>);
+static_assert(Allocator<ConstrainedAllocator>);
 
 }

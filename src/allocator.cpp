@@ -2,6 +2,8 @@
 #include "p4alloc/graph.hpp"
 #include <algorithm>
 #include <span>
+#include <limits>
+#include <queue>
 
 namespace p4alloc {
 namespace {
@@ -82,7 +84,48 @@ Allocation place_ordered(const Program& program, const Graph& graph,
     return result;
 }
 
-Result<Allocation> run(const Program& program) {
+std::vector<std::size_t> constrained_order(const Program& program, const Graph& graph) {
+    const auto pressure = [&](std::size_t index) {
+        const auto& table = program.tables[index];
+        const auto budget = capacity(program.pipeline, table.type);
+        if (budget == 0) {
+            return table.size == 0 ? 0.0L : std::numeric_limits<long double>::infinity();
+        }
+        return static_cast<long double>(table.size) / static_cast<long double>(budget);
+    };
+    const auto lower_priority = [&](std::size_t a, std::size_t b) {
+        if (graph.critical_path[a] != graph.critical_path[b]) {
+            return graph.critical_path[a] < graph.critical_path[b];
+        }
+        if (pressure(a) != pressure(b)) {
+            return pressure(a) < pressure(b);
+        }
+        return a > b;
+    };
+    std::priority_queue<std::size_t, std::vector<std::size_t>, decltype(lower_priority)> ready(lower_priority);
+    std::vector<std::size_t> indegrees(program.tables.size());
+    for (std::size_t i = 0; i < program.tables.size(); ++i) {
+        indegrees[i] = graph.incoming[i].size();
+        if (indegrees[i] == 0) {
+            ready.push(i);
+        }
+    }
+    std::vector<std::size_t> order;
+    order.reserve(program.tables.size());
+    while (!ready.empty()) {
+        const auto table = ready.top();
+        ready.pop();
+        order.push_back(table);
+        for (const auto& edge : graph.outgoing[table]) {
+            if (--indegrees[edge.table] == 0) {
+                ready.push(edge.table);
+            }
+        }
+    }
+    return order;
+}
+
+Result<Allocation> run(const Program& program, bool constrained) {
     const auto& p = program.pipeline;
     if (p.stages == 0 || p.stages > 1000000 || p.sram_per_stage < 0 || p.tcam_per_stage < 0) {
         return Error{"invalid pipeline: require 1..1000000 stages and nonnegative capacities"};
@@ -97,6 +140,10 @@ Result<Allocation> run(const Program& program) {
         return *error;
     }
     const auto& graph = std::get<Graph>(graph_result);
+    if (constrained) {
+        const auto order = constrained_order(program, graph);
+        return place_ordered(program, graph, order, "constrained");
+    }
     return place_ordered(program, graph, graph.order, "greedy");
 }
 
@@ -113,7 +160,11 @@ std::size_t Allocation::stages_used() const {
 }
 
 Result<Allocation> GreedyAllocator::operator()(const Program& program) const {
-    return run(program);
+    return run(program, false);
+}
+
+Result<Allocation> ConstrainedAllocator::operator()(const Program& program) const {
+    return run(program, true);
 }
 
 }
