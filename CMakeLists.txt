@@ -24,7 +24,7 @@ if(BUILD_TESTING)
         URL https://codeload.github.com/catchorg/Catch2/tar.gz/refs/tags/v3.7.1
         URL_HASH SHA256=c991b247a1a0d7bb9c39aa35faf0fe9e19764213f28ffba3109388e62ee0269c)
     FetchContent_MakeAvailable(Catch2)
-    add_executable(allocator_tests tests/input_test.cpp tests/graph_test.cpp tests/allocator_test.cpp)
+    add_executable(allocator_tests tests/input_test.cpp tests/graph_test.cpp tests/allocator_test.cpp tests/heuristic_test.cpp)
     target_link_libraries(allocator_tests PRIVATE p4alloc Catch2::Catch2WithMain)
     list(APPEND CMAKE_MODULE_PATH "${catch2_SOURCE_DIR}/extras")
     include(Catch)
