@@ -1,0 +1,46 @@
+{
+  "pipeline": {
+    "stages": 4,
+    "sram_per_stage": 64,
+    "tcam_per_stage": 16
+  },
+  "tables": [
+    {
+      "name": "classify",
+      "type": "tcam",
+      "size": 8
+    },
+    {
+      "name": "service",
+      "type": "exact",
+      "size": 24,
+      "match_deps": [
+        "classify"
+      ]
+    },
+    {
+      "name": "hash",
+      "type": "exact",
+      "size": 16,
+      "action_deps": [
+        "service"
+      ]
+    },
+    {
+      "name": "backend",
+      "type": "exact",
+      "size": 40,
+      "match_deps": [
+        "service"
+      ]
+    },
+    {
+      "name": "rewrite",
+      "type": "exact",
+      "size": 8,
+      "action_deps": [
+        "backend"
+      ]
+    }
+  ]
+}

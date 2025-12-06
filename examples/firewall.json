@@ -1,0 +1,30 @@
+{
+  "pipeline": {
+    "stages": 4,
+    "sram_per_stage": 100,
+    "tcam_per_stage": 20
+  },
+  "tables": [
+    {
+      "name": "ipv4_lpm",
+      "type": "tcam",
+      "size": 15,
+      "match_deps": [
+        "eth_check"
+      ]
+    },
+    {
+      "name": "eth_check",
+      "type": "exact",
+      "size": 30
+    },
+    {
+      "name": "acl",
+      "type": "tcam",
+      "size": 10,
+      "action_deps": [
+        "ipv4_lpm"
+      ]
+    }
+  ]
+}

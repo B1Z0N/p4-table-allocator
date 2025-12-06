@@ -1,0 +1,3 @@
+#!/bin/sh
+allocator_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+exec "$allocator_dir/build/allocator" "$@"
