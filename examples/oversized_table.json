@@ -1,0 +1,30 @@
+{
+  "pipeline": {
+    "stages": 5,
+    "sram_per_stage": 50,
+    "tcam_per_stage": 12
+  },
+  "tables": [
+    {
+      "name": "routes",
+      "type": "tcam",
+      "size": 28
+    },
+    {
+      "name": "neighbors",
+      "type": "exact",
+      "size": 90,
+      "action_deps": [
+        "routes"
+      ]
+    },
+    {
+      "name": "counters",
+      "type": "exact",
+      "size": 10,
+      "action_deps": [
+        "neighbors"
+      ]
+    }
+  ]
+}

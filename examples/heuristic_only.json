@@ -1,0 +1,35 @@
+{
+  "pipeline": {
+    "stages": 3,
+    "sram_per_stage": 10,
+    "tcam_per_stage": 0
+  },
+  "tables": [
+    {
+      "name": "background",
+      "type": "exact",
+      "size": 6
+    },
+    {
+      "name": "classify",
+      "type": "exact",
+      "size": 6
+    },
+    {
+      "name": "route",
+      "type": "exact",
+      "size": 6,
+      "match_deps": [
+        "classify"
+      ]
+    },
+    {
+      "name": "rewrite",
+      "type": "exact",
+      "size": 4,
+      "match_deps": [
+        "route"
+      ]
+    }
+  ]
+}

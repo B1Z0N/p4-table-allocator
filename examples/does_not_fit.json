@@ -1,0 +1,22 @@
+{
+  "pipeline": {
+    "stages": 2,
+    "sram_per_stage": 10,
+    "tcam_per_stage": 5
+  },
+  "tables": [
+    {
+      "name": "routes",
+      "type": "tcam",
+      "size": 11
+    },
+    {
+      "name": "egress",
+      "type": "exact",
+      "size": 5,
+      "match_deps": [
+        "routes"
+      ]
+    }
+  ]
+}

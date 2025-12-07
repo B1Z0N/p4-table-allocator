@@ -1,0 +1,49 @@
+{
+  "pipeline": {
+    "stages": 4,
+    "sram_per_stage": 32,
+    "tcam_per_stage": 16
+  },
+  "tables": [
+    {
+      "name": "ingress",
+      "type": "exact",
+      "size": 8
+    },
+    {
+      "name": "routes",
+      "type": "tcam",
+      "size": 12,
+      "match_deps": [
+        "ingress"
+      ]
+    },
+    {
+      "name": "meter",
+      "type": "exact",
+      "size": 12,
+      "action_deps": [
+        "routes"
+      ]
+    },
+    {
+      "name": "acl",
+      "type": "tcam",
+      "size": 8,
+      "match_deps": [
+        "routes"
+      ],
+      "action_deps": [
+        "meter"
+      ]
+    },
+    {
+      "name": "egress",
+      "type": "exact",
+      "size": 16,
+      "action_deps": [
+        "acl"
+      ]
+    }
+  ]
+}
